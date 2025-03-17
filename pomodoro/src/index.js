@@ -9,11 +9,11 @@
  */
 
 const html = `<!DOCTYPE html>
-<html lang="zh-CN">
+<html id="htmlRoot">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>番茄钟</title>
+  <title id="pageTitle">Pomodoro Timer</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%22-5 0 110 100%22><text y=%2280%22 font-size=%2280%22>🍅</text></svg>" type="image/svg+xml">
   <style>
     :root {
@@ -369,15 +369,37 @@ const html = `<!DOCTYPE html>
         padding: 15px;
       }
     }
+    
+    /* 语言切换按钮样式 */
+    .language-switch {
+      position: fixed;
+      top: 10px;
+      right: 10px;
+      background: rgba(255,255,255,0.9);
+      border: 1px solid rgba(0,0,0,0.1);
+      border-radius: 4px;
+      padding: 5px 10px;
+      font-size: 14px;
+      cursor: pointer;
+      z-index: 1000;
+      transition: all 0.2s ease;
+    }
+    
+    .language-switch:hover {
+      background: rgba(255,255,255,1);
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
   </style>
 </head>
 <body>
+  <button id="languageSwitch" class="language-switch">🌐 English / 中文</button>
+  
   <div class="container work-theme" id="container">
-    <h1>番茄钟</h1>
+    <h1 id="heading">Pomodoro Timer</h1>
     
-    <div class="mode-indicator work-mode" id="modeIndicator">专注工作模式</div>
+    <div class="mode-indicator work-mode" id="modeIndicator">Focus Work Mode</div>
     
-    <div class="status" id="statusDisplay">准备开始</div>
+    <div class="status" id="statusDisplay">Ready to Start</div>
     
     <div class="progress-container">
       <div class="progress-bar">
@@ -390,115 +412,323 @@ const html = `<!DOCTYPE html>
     </div>
     
     <div class="controls">
-      <button class="start-btn" id="startBtn">开始</button>
-      <button class="skip-btn" id="skipBtn">跳过</button>
-      <button class="reset-btn" id="resetBtn">重置</button>
+      <button class="start-btn" id="startBtn">Start</button>
+      <button class="skip-btn" id="skipBtn">Skip</button>
+      <button class="reset-btn" id="resetBtn">Reset</button>
     </div>
     
-    <button class="settings-toggle" id="settingsToggle" aria-label="设置"></button>
+    <button class="settings-toggle" id="settingsToggle" aria-label="Settings"></button>
     
     <div class="settings" id="settings">
-      <h2>设置</h2>
+      <h2 id="settingsHeading">Settings</h2>
       <div class="settings-group">
-        <label for="workTime">工作时间（分钟）</label>
+        <label for="workTime" id="workTimeLabel">Work Time (minutes)</label>
         <input type="number" id="workTime" min="1" max="60" value="25">
       </div>
       <div class="settings-group">
-        <label for="breakTime">休息时间（分钟）</label>
+        <label for="breakTime" id="breakTimeLabel">Break Time (minutes)</label>
         <input type="number" id="breakTime" min="1" max="30" value="5">
       </div>
     </div>
   </div>
 
   <script>
+    // 翻译数据
+    const translations = {
+      zh: {
+        title: '番茄时钟',
+        heading: '番茄时钟',
+        workMode: '专注工作模式',
+        breakMode: '休息放松模式',
+        ready: '准备开始',
+        working: '专注工作中...',
+        resting: '休息时间...',
+        paused: '已暂停',
+        readyToWork: '准备工作',
+        readyToRest: '准备休息',
+        start: '开始',
+        pause: '暂停',
+        resume: '继续',
+        skip: '跳过',
+        reset: '重置',
+        settings: '设置',
+        workTime: '工作时间（分钟）',
+        breakTime: '休息时间（分钟）',
+        notificationTitle: '番茄时钟',
+        workEndMessage: '工作时间结束！休息一下吧。',
+        breakEndMessage: '休息时间结束！开始工作吧。',
+        notSupported: '此浏览器不支持通知功能',
+        notificationReady: '番茄时钟已准备就绪',
+        notificationReadyBody: '您将在每个工作和休息阶段结束时收到通知',
+        notificationPermission: '通知权限未开启，您将无法收到时钟结束通知。',
+        enableNotification: '开启通知'
+      },
+      en: {
+        title: 'Pomodoro Timer',
+        heading: 'Pomodoro Timer',
+        workMode: 'Focus Work Mode',
+        breakMode: 'Break Mode',
+        ready: 'Ready to Start',
+        working: 'Working...',
+        resting: 'Taking a break...',
+        paused: 'Paused',
+        readyToWork: 'Ready to work',
+        readyToRest: 'Ready to rest',
+        start: 'Start',
+        pause: 'Pause',
+        resume: 'Resume',
+        skip: 'Skip',
+        reset: 'Reset',
+        settings: 'Settings',
+        workTime: 'Work Time (minutes)',
+        breakTime: 'Break Time (minutes)',
+        notificationTitle: 'Pomodoro Timer',
+        workEndMessage: 'Work time is over! Take a break.',
+        breakEndMessage: 'Break time is over! Back to work.',
+        notSupported: 'This browser does not support notifications',
+        notificationReady: 'Pomodoro Timer is ready',
+        notificationReadyBody: 'You will receive notifications at the end of each work and break session',
+        notificationPermission: 'Notification permission is not granted. You will not receive timer notifications.',
+        enableNotification: 'Enable Notifications'
+      }
+    };
+
     document.addEventListener('DOMContentLoaded', () => {
-      // DOM 元素
-      const timerDisplay = document.getElementById('timer');
-      const startBtn = document.getElementById('startBtn');
-      const skipBtn = document.getElementById('skipBtn');
-      const resetBtn = document.getElementById('resetBtn');
-      const statusDisplay = document.getElementById('statusDisplay');
-      const progressBar = document.getElementById('progress');
-      const workTimeInput = document.getElementById('workTime');
-      const breakTimeInput = document.getElementById('breakTime');
-      const modeIndicator = document.getElementById('modeIndicator');
-      const settingsToggle = document.getElementById('settingsToggle');
-      const settings = document.getElementById('settings');
+      // 检测浏览器语言
+      const userLang = navigator.language || navigator.userLanguage || 'en';
       
-      // 通知功能
-      let notificationPermissionGranted = false;
+      // 从本地存储中获取用户选择的语言
+      let savedLang = localStorage.getItem('preferredLanguage');
       
-      // 检查通知权限
-      function checkNotificationPermission() {
-        if (!('Notification' in window)) {
-          console.log('此浏览器不支持通知功能');
-          return false;
-        }
-        
-        return Notification.permission === 'granted';
+      // 更精确的语言检测
+      let lang = 'en';
+      if (savedLang) {
+        // 如果有保存的语言偏好，使用它
+        lang = savedLang;
+      } else if (userLang.toLowerCase().indexOf('zh') !== -1) {
+        // 否则根据浏览器语言判断
+        lang = 'zh';
       }
       
-      // 请求通知权限
-      function requestNotificationPermission() {
-        if (!('Notification' in window)) {
-          console.log('此浏览器不支持通知功能');
-          return;
+      // 设置HTML lang属性
+      document.getElementById('htmlRoot').setAttribute('lang', lang === 'zh' ? 'zh-CN' : 'en');
+      
+      // 获取翻译对象
+      let t = translations[lang];
+      
+      // 更新所有UI文本的函数
+      function updateUILanguage() {
+        document.getElementById('pageTitle').textContent = t.title;
+        document.getElementById('heading').textContent = t.heading;
+        document.getElementById('modeIndicator').textContent = isWorkTime ? t.workMode : t.breakMode;
+        document.getElementById('statusDisplay').textContent = isRunning ? 
+          (isWorkTime ? t.working : t.resting) : 
+          (timeLeft < totalTime ? t.paused : t.ready);
+        document.getElementById('startBtn').textContent = isRunning ? t.pause : (timeLeft < totalTime ? t.resume : t.start);
+        document.getElementById('skipBtn').textContent = t.skip;
+        document.getElementById('resetBtn').textContent = t.reset;
+        document.getElementById('settingsHeading').textContent = t.settings;
+        document.getElementById('workTimeLabel').textContent = t.workTime;
+        document.getElementById('breakTimeLabel').textContent = t.breakTime;
+        document.getElementById('settingsToggle').setAttribute('aria-label', t.settings);
+        
+        // 更新语言切换按钮文本
+        languageSwitch.textContent = lang === 'zh' ? '🌐 English' : '🌐 中文';
+      }
+      
+      // 切换语言的函数
+      function switchLanguage() {
+        lang = lang === 'zh' ? 'en' : 'zh';
+        t = translations[lang];
+        document.getElementById('htmlRoot').setAttribute('lang', lang === 'zh' ? 'zh-CN' : 'en');
+        
+        // 保存语言偏好到本地存储
+        localStorage.setItem('preferredLanguage', lang);
+        
+        updateUILanguage();
+      }
+      
+      // 添加语言切换按钮事件
+      languageSwitch.addEventListener('click', switchLanguage);
+      
+      // 状态变量
+      let isRunning = false;
+      let isWorkTime = true;
+      let timer = null;
+      let timeLeft = 0;
+      let totalTime = 0;
+      
+      // 从本地存储加载设置
+      function loadSettings() {
+        const savedWorkTime = localStorage.getItem('workTime');
+        const savedBreakTime = localStorage.getItem('breakTime');
+        
+        if (savedWorkTime) {
+          document.getElementById('workTime').value = savedWorkTime;
         }
         
-        Notification.requestPermission()
-          .then(permission => {
-            notificationPermissionGranted = permission === 'granted';
+        if (savedBreakTime) {
+          document.getElementById('breakTime').value = savedBreakTime;
+        }
+        
+        timeLeft = document.getElementById('workTime').value * 60;
+        totalTime = timeLeft;
+        updateTimerDisplay();
+        updateModeIndicator();
+        
+        // 初始化后更新UI语言
+        updateUILanguage();
+      }
+      
+      // 保存设置到本地存储
+      function saveSettings() {
+        localStorage.setItem('workTime', document.getElementById('workTime').value);
+        localStorage.setItem('breakTime', document.getElementById('breakTime').value);
+      }
+      
+      // 更新计时器显示
+      function updateTimerDisplay() {
+        const minutes = Math.floor(timeLeft / 60);
+        const seconds = timeLeft % 60;
+        document.getElementById('timer').textContent = \`\${minutes.toString().padStart(2, '0')}:\${seconds.toString().padStart(2, '0')}\`;
+        
+        // 更新进度条
+        const progress = ((totalTime - timeLeft) / totalTime) * 100;
+        document.getElementById('progress').style.width = \`\${progress}%\`;
+      }
+      
+      // 更新模式指示器
+      function updateModeIndicator() {
+        const container = document.getElementById('container');
+        
+        if (isWorkTime) {
+          document.getElementById('modeIndicator').textContent = t.workMode;
+          document.getElementById('modeIndicator').className = 'mode-indicator work-mode';
+          container.className = 'container work-theme';
+          document.body.style.backgroundColor = '#fff9f8';
+        } else {
+          document.getElementById('modeIndicator').textContent = t.breakMode;
+          document.getElementById('modeIndicator').className = 'mode-indicator break-mode';
+          container.className = 'container break-theme';
+          document.body.style.backgroundColor = '#f5f8ff';
+        }
+      }
+      
+      // 开始计时器
+      function startTimer() {
+        if (isRunning) return;
+        
+        isRunning = true;
+        document.getElementById('startBtn').textContent = t.pause;
+        
+        document.getElementById('statusDisplay').textContent = isWorkTime ? t.working : t.resting;
+        
+        timer = setInterval(() => {
+          timeLeft--;
+          updateTimerDisplay();
+          
+          if (timeLeft <= 0) {
+            clearInterval(timer);
+            isRunning = false;
+            document.getElementById('startBtn').textContent = t.start;
             
-            if (notificationPermissionGranted) {
-              // 发送测试通知
-              try {
-                const testNotification = new Notification('番茄钟已准备就绪', {
-                  body: '您将在每个工作和休息阶段结束时收到通知',
-                  icon: 'https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f345.png'
-                });
-                
-                // 3秒后自动关闭测试通知
-                setTimeout(() => testNotification.close(), 3000);
-              } catch (error) {
-                console.error('发送通知时出错:', error);
-              }
-            }
-          });
+            // 切换工作/休息状态
+            isWorkTime = !isWorkTime;
+            updateModeIndicator();
+            
+            // 发送通知
+            const notificationTitle = t.notificationTitle;
+            const notificationMessage = isWorkTime ? t.breakEndMessage : t.workEndMessage;
+            
+            // 尝试发送通知
+            sendNotification(notificationTitle, notificationMessage);
+            
+            // 设置新的时间
+            timeLeft = isWorkTime ? document.getElementById('workTime').value * 60 : document.getElementById('breakTime').value * 60;
+            totalTime = timeLeft;
+            updateTimerDisplay();
+            document.getElementById('statusDisplay').textContent = isWorkTime ? t.readyToWork : t.readyToRest;
+          }
+        }, 1000);
       }
       
-      // 发送通知
-      function sendNotification(title, message) {
-        if (!checkNotificationPermission()) {
-          console.log('通知权限未授予，无法发送通知');
-          return;
-        }
+      // 暂停计时器
+      function pauseTimer() {
+        if (!isRunning) return;
         
-        try {
-          const notification = new Notification(title, {
-            body: message,
-            icon: 'https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f345.png',
-            requireInteraction: true  // 通知会一直显示，直到用户交互
-          });
-          
-          // 点击通知时聚焦到应用
-          notification.onclick = function() {
-            window.focus();
-            this.close();
-          };
-          
-          // 播放提示音
-          const audio = new Audio('https://assets.mixkit.co/sfx/preview/mixkit-software-interface-alert-notification-306.mp3');
-          audio.play().catch(e => console.log('无法播放提示音:', e));
-          
-          // 10秒后自动关闭通知
-          setTimeout(() => notification.close(), 10000);
-        } catch (error) {
-          console.error('发送通知时出错:', error);
-        }
+        clearInterval(timer);
+        isRunning = false;
+        document.getElementById('startBtn').textContent = t.resume;
+        document.getElementById('statusDisplay').textContent = t.paused;
       }
+      
+      // 跳过当前阶段
+      function skipPhase() {
+        clearInterval(timer);
+        isRunning = false;
+        document.getElementById('startBtn').textContent = t.start;
+        
+        // 切换工作/休息状态
+        isWorkTime = !isWorkTime;
+        updateModeIndicator();
+        
+        // 设置新的时间
+        timeLeft = isWorkTime ? document.getElementById('workTime').value * 60 : document.getElementById('breakTime').value * 60;
+        totalTime = timeLeft;
+        updateTimerDisplay();
+        document.getElementById('statusDisplay').textContent = isWorkTime ? t.readyToWork : t.readyToRest;
+      }
+      
+      // 重置计时器
+      function resetTimer() {
+        clearInterval(timer);
+        isRunning = false;
+        isWorkTime = true;
+        document.getElementById('startBtn').textContent = t.start;
+        
+        timeLeft = document.getElementById('workTime').value * 60;
+        totalTime = timeLeft;
+        updateTimerDisplay();
+        updateModeIndicator();
+        document.getElementById('statusDisplay').textContent = t.ready;
+      }
+      
+      // 事件监听器
+      document.getElementById('startBtn').addEventListener('click', () => {
+        if (isRunning) {
+          pauseTimer();
+        } else {
+          startTimer();
+        }
+      });
+      
+      document.getElementById('skipBtn').addEventListener('click', skipPhase);
+      document.getElementById('resetBtn').addEventListener('click', resetTimer);
+      
+      document.getElementById('workTime').addEventListener('change', () => {
+        if (!isRunning && isWorkTime) {
+          timeLeft = document.getElementById('workTime').value * 60;
+          totalTime = timeLeft;
+          updateTimerDisplay();
+        }
+        saveSettings();
+      });
+      
+      document.getElementById('breakTime').addEventListener('change', () => {
+        if (!isRunning && !isWorkTime) {
+          timeLeft = document.getElementById('breakTime').value * 60;
+          totalTime = timeLeft;
+          updateTimerDisplay();
+        }
+        saveSettings();
+      });
+      
+      // 初始化
+      loadSettings();
       
       // 设置区域切换
-      settingsToggle.addEventListener('click', () => {
+      document.getElementById('settingsToggle').addEventListener('click', () => {
+        const settings = document.getElementById('settings');
         settings.classList.toggle('expanded');
         
         // 每次打开设置时检查通知权限
@@ -523,7 +753,7 @@ const html = `<!DOCTYPE html>
             paragraph.style.marginTop = '15px';
             paragraph.style.fontSize = '0.9rem';
             paragraph.style.marginBottom = '15px';
-            paragraph.textContent = '通知权限未开启，您将无法收到时钟结束通知。';
+            paragraph.textContent = t.notificationPermission;
             
             const enableButton = document.createElement('button');
             enableButton.id = 'enableNotifications';
@@ -536,7 +766,7 @@ const html = `<!DOCTYPE html>
             enableButton.style.marginTop = '10px';
             enableButton.style.display = 'block';
             enableButton.style.width = '100%';
-            enableButton.textContent = '开启通知';
+            enableButton.textContent = t.enableNotification;
             
             paragraph.appendChild(enableButton);
             notificationStatus.appendChild(paragraph);
@@ -551,177 +781,77 @@ const html = `<!DOCTYPE html>
         }
       });
       
-      // 状态变量
-      let isRunning = false;
-      let isWorkTime = true;
-      let timer = null;
-      let timeLeft = workTimeInput.value * 60;
-      let totalTime = workTimeInput.value * 60;
+      // 通知功能
+      let notificationPermissionGranted = false;
       
-      // 从本地存储加载设置
-      function loadSettings() {
-        const savedWorkTime = localStorage.getItem('workTime');
-        const savedBreakTime = localStorage.getItem('breakTime');
-        
-        if (savedWorkTime) {
-          workTimeInput.value = savedWorkTime;
+      // 检查通知权限
+      function checkNotificationPermission() {
+        if (!('Notification' in window)) {
+          console.log(t.notSupported);
+          return false;
         }
         
-        if (savedBreakTime) {
-          breakTimeInput.value = savedBreakTime;
+        return Notification.permission === 'granted';
+      }
+      
+      // 请求通知权限
+      function requestNotificationPermission() {
+        if (!('Notification' in window)) {
+          console.log(t.notSupported);
+          return;
         }
         
-        timeLeft = workTimeInput.value * 60;
-        totalTime = timeLeft;
-        updateTimerDisplay();
-        updateModeIndicator();
+        Notification.requestPermission()
+          .then(permission => {
+            notificationPermissionGranted = permission === 'granted';
+            
+            if (notificationPermissionGranted) {
+              // 发送测试通知
+              try {
+                const testNotification = new Notification(t.notificationReady, {
+                  body: t.notificationReadyBody,
+                  icon: 'https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f345.png'
+                });
+                
+                // 3秒后自动关闭测试通知
+                setTimeout(() => testNotification.close(), 3000);
+              } catch (error) {
+                console.error('Error sending notification:', error);
+              }
+            }
+          });
       }
       
-      // 保存设置到本地存储
-      function saveSettings() {
-        localStorage.setItem('workTime', workTimeInput.value);
-        localStorage.setItem('breakTime', breakTimeInput.value);
-      }
-      
-      // 更新计时器显示
-      function updateTimerDisplay() {
-        const minutes = Math.floor(timeLeft / 60);
-        const seconds = timeLeft % 60;
-        timerDisplay.textContent = \`\${minutes.toString().padStart(2, '0')}:\${seconds.toString().padStart(2, '0')}\`;
-        
-        // 更新进度条
-        const progress = ((totalTime - timeLeft) / totalTime) * 100;
-        progressBar.style.width = \`\${progress}%\`;
-      }
-      
-      // 更新模式指示器
-      function updateModeIndicator() {
-        const container = document.getElementById('container');
-        
-        if (isWorkTime) {
-          modeIndicator.textContent = '专注工作模式';
-          modeIndicator.className = 'mode-indicator work-mode';
-          container.className = 'container work-theme';
-          document.body.style.backgroundColor = '#fff9f8';
-        } else {
-          modeIndicator.textContent = '休息放松模式';
-          modeIndicator.className = 'mode-indicator break-mode';
-          container.className = 'container break-theme';
-          document.body.style.backgroundColor = '#f5f8ff';
+      // 发送通知
+      function sendNotification(title, message) {
+        if (!checkNotificationPermission()) {
+          console.log('Notification permission not granted');
+          return;
         }
-      }
-      
-      // 开始计时器
-      function startTimer() {
-        if (isRunning) return;
         
-        isRunning = true;
-        startBtn.textContent = '暂停';
-        
-        statusDisplay.textContent = isWorkTime ? '专注工作中...' : '休息时间...';
-        
-        timer = setInterval(() => {
-          timeLeft--;
-          updateTimerDisplay();
+        try {
+          const notification = new Notification(title, {
+            body: message,
+            icon: 'https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f345.png',
+            requireInteraction: true  // 通知会一直显示，直到用户交互
+          });
           
-          if (timeLeft <= 0) {
-            clearInterval(timer);
-            isRunning = false;
-            startBtn.textContent = '开始';
-            
-            // 切换工作/休息状态
-            isWorkTime = !isWorkTime;
-            updateModeIndicator();
-            
-            // 发送通知
-            const notificationTitle = '番茄钟';
-            const notificationMessage = isWorkTime ? '休息时间结束！开始工作吧。' : '工作时间结束！休息一下吧。';
-            
-            // 尝试发送通知
-            sendNotification(notificationTitle, notificationMessage);
-            
-            // 设置新的时间
-            timeLeft = isWorkTime ? workTimeInput.value * 60 : breakTimeInput.value * 60;
-            totalTime = timeLeft;
-            updateTimerDisplay();
-            statusDisplay.textContent = isWorkTime ? '准备工作' : '准备休息';
-          }
-        }, 1000);
-      }
-      
-      // 暂停计时器
-      function pauseTimer() {
-        if (!isRunning) return;
-        
-        clearInterval(timer);
-        isRunning = false;
-        startBtn.textContent = '继续';
-        statusDisplay.textContent = '已暂停';
-      }
-      
-      // 跳过当前阶段
-      function skipPhase() {
-        clearInterval(timer);
-        isRunning = false;
-        startBtn.textContent = '开始';
-        
-        // 切换工作/休息状态
-        isWorkTime = !isWorkTime;
-        updateModeIndicator();
-        
-        // 设置新的时间
-        timeLeft = isWorkTime ? workTimeInput.value * 60 : breakTimeInput.value * 60;
-        totalTime = timeLeft;
-        updateTimerDisplay();
-        statusDisplay.textContent = isWorkTime ? '准备工作' : '准备休息';
-      }
-      
-      // 重置计时器
-      function resetTimer() {
-        clearInterval(timer);
-        isRunning = false;
-        isWorkTime = true;
-        startBtn.textContent = '开始';
-        
-        timeLeft = workTimeInput.value * 60;
-        totalTime = timeLeft;
-        updateTimerDisplay();
-        updateModeIndicator();
-        statusDisplay.textContent = '准备开始';
-      }
-      
-      // 事件监听器
-      startBtn.addEventListener('click', () => {
-        if (isRunning) {
-          pauseTimer();
-        } else {
-          startTimer();
+          // 点击通知时聚焦到应用
+          notification.onclick = function() {
+            window.focus();
+            this.close();
+          };
+          
+          // 播放提示音
+          const audio = new Audio('https://assets.mixkit.co/sfx/preview/mixkit-software-interface-alert-notification-306.mp3');
+          audio.play().catch(e => console.log('Cannot play sound:', e));
+          
+          // 10秒后自动关闭通知
+          setTimeout(() => notification.close(), 10000);
+        } catch (error) {
+          console.error('Error sending notification:', error);
         }
-      });
-      
-      skipBtn.addEventListener('click', skipPhase);
-      resetBtn.addEventListener('click', resetTimer);
-      
-      workTimeInput.addEventListener('change', () => {
-        if (!isRunning && isWorkTime) {
-          timeLeft = workTimeInput.value * 60;
-          totalTime = timeLeft;
-          updateTimerDisplay();
-        }
-        saveSettings();
-      });
-      
-      breakTimeInput.addEventListener('change', () => {
-        if (!isRunning && !isWorkTime) {
-          timeLeft = breakTimeInput.value * 60;
-          totalTime = timeLeft;
-          updateTimerDisplay();
-        }
-        saveSettings();
-      });
-      
-      // 初始化
-      loadSettings();
+      }
       
       // 初始化时检查通知权限
       notificationPermissionGranted = checkNotificationPermission();
