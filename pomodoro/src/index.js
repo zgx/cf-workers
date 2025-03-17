@@ -14,6 +14,7 @@ const html = `<!DOCTYPE html>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>番茄钟</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%22-5 0 110 100%22><text y=%2280%22 font-size=%2280%22>🍅</text></svg>" type="image/svg+xml">
   <style>
     :root {
       --primary-color: #ff6347;
@@ -179,7 +180,7 @@ const html = `<!DOCTYPE html>
     }
     
     .settings.expanded {
-      max-height: 300px;
+      max-height: 400px;
       padding: 20px;
       margin-top: 40px;
     }
@@ -424,9 +425,130 @@ const html = `<!DOCTYPE html>
       const settingsToggle = document.getElementById('settingsToggle');
       const settings = document.getElementById('settings');
       
+      // 通知功能
+      let notificationPermissionGranted = false;
+      
+      // 检查通知权限
+      function checkNotificationPermission() {
+        if (!('Notification' in window)) {
+          console.log('此浏览器不支持通知功能');
+          return false;
+        }
+        
+        return Notification.permission === 'granted';
+      }
+      
+      // 请求通知权限
+      function requestNotificationPermission() {
+        if (!('Notification' in window)) {
+          console.log('此浏览器不支持通知功能');
+          return;
+        }
+        
+        Notification.requestPermission()
+          .then(permission => {
+            notificationPermissionGranted = permission === 'granted';
+            
+            if (notificationPermissionGranted) {
+              // 发送测试通知
+              try {
+                const testNotification = new Notification('番茄钟已准备就绪', {
+                  body: '您将在每个工作和休息阶段结束时收到通知',
+                  icon: 'https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f345.png'
+                });
+                
+                // 3秒后自动关闭测试通知
+                setTimeout(() => testNotification.close(), 3000);
+              } catch (error) {
+                console.error('发送通知时出错:', error);
+              }
+            }
+          });
+      }
+      
+      // 发送通知
+      function sendNotification(title, message) {
+        if (!checkNotificationPermission()) {
+          console.log('通知权限未授予，无法发送通知');
+          return;
+        }
+        
+        try {
+          const notification = new Notification(title, {
+            body: message,
+            icon: 'https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f345.png',
+            requireInteraction: true  // 通知会一直显示，直到用户交互
+          });
+          
+          // 点击通知时聚焦到应用
+          notification.onclick = function() {
+            window.focus();
+            this.close();
+          };
+          
+          // 播放提示音
+          const audio = new Audio('https://assets.mixkit.co/sfx/preview/mixkit-software-interface-alert-notification-306.mp3');
+          audio.play().catch(e => console.log('无法播放提示音:', e));
+          
+          // 10秒后自动关闭通知
+          setTimeout(() => notification.close(), 10000);
+        } catch (error) {
+          console.error('发送通知时出错:', error);
+        }
+      }
+      
       // 设置区域切换
       settingsToggle.addEventListener('click', () => {
         settings.classList.toggle('expanded');
+        
+        // 每次打开设置时检查通知权限
+        if (settings.classList.contains('expanded')) {
+          notificationPermissionGranted = checkNotificationPermission();
+          
+          if (!notificationPermissionGranted) {
+            // 如果已经有通知状态元素，则移除它
+            const existingStatus = document.querySelector('.notification-status');
+            if (existingStatus) {
+              existingStatus.remove();
+            }
+            
+            // 创建新的通知状态元素
+            const notificationStatus = document.createElement('div');
+            notificationStatus.className = 'notification-status';
+            notificationStatus.style.marginBottom = '20px';
+            
+            // 使用DOM API创建元素而不是innerHTML
+            const paragraph = document.createElement('p');
+            paragraph.style.color = '#e74c3c';
+            paragraph.style.marginTop = '15px';
+            paragraph.style.fontSize = '0.9rem';
+            paragraph.style.marginBottom = '15px';
+            paragraph.textContent = '通知权限未开启，您将无法收到时钟结束通知。';
+            
+            const enableButton = document.createElement('button');
+            enableButton.id = 'enableNotifications';
+            enableButton.style.background = 'var(--primary-color)';
+            enableButton.style.color = 'white';
+            enableButton.style.border = 'none';
+            enableButton.style.padding = '8px 15px';
+            enableButton.style.borderRadius = '4px';
+            enableButton.style.cursor = 'pointer';
+            enableButton.style.marginTop = '10px';
+            enableButton.style.display = 'block';
+            enableButton.style.width = '100%';
+            enableButton.textContent = '开启通知';
+            
+            paragraph.appendChild(enableButton);
+            notificationStatus.appendChild(paragraph);
+            
+            settings.appendChild(notificationStatus);
+            
+            enableButton.addEventListener('click', () => {
+              requestNotificationPermission();
+              notificationStatus.remove();
+            });
+          }
+        }
       });
       
       // 状态变量
@@ -512,13 +634,11 @@ const html = `<!DOCTYPE html>
             updateModeIndicator();
             
             // 发送通知
-            if (Notification.permission === 'granted') {
-              const message = isWorkTime ? '休息时间结束！开始工作吧。' : '工作时间结束！休息一下吧。';
-              new Notification('番茄钟', { 
-                body: message,
-                icon: 'https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f345.png'
-              });
-            }
+            const notificationTitle = '番茄钟';
+            const notificationMessage = isWorkTime ? '休息时间结束！开始工作吧。' : '工作时间结束！休息一下吧。';
+            
+            // 尝试发送通知
+            sendNotification(notificationTitle, notificationMessage);
             
             // 设置新的时间
             timeLeft = isWorkTime ? workTimeInput.value * 60 : breakTimeInput.value * 60;
@@ -570,15 +690,6 @@ const html = `<!DOCTYPE html>
         statusDisplay.textContent = '准备开始';
       }
       
-      // 请求通知权限
-      function requestNotificationPermission() {
-        if ('Notification' in window) {
-          if (Notification.permission !== 'granted' && Notification.permission !== 'denied') {
-            Notification.requestPermission();
-          }
-        }
-      }
-      
       // 事件监听器
       startBtn.addEventListener('click', () => {
         if (isRunning) {
@@ -611,7 +722,15 @@ const html = `<!DOCTYPE html>
       
       // 初始化
       loadSettings();
-      requestNotificationPermission();
+      
+      // 初始化时检查通知权限
+      notificationPermissionGranted = checkNotificationPermission();
+      if (!notificationPermissionGranted) {
+        // 在页面加载后3秒请求通知权限
+        setTimeout(() => {
+          requestNotificationPermission();
+        }, 3000);
+      }
     });
   </script>
 </body>
