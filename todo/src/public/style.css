@@ -1,0 +1,100 @@
+/* 通知权限提示框样式 */
+.notification-prompt {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 1000;
+  background-color: #fff;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  padding: 0;
+  max-width: 320px;
+  animation: slide-in 0.3s ease-out;
+}
+
+.notification-prompt-content {
+  padding: 16px;
+}
+
+.notification-prompt p {
+  margin: 0 0 12px 0;
+  font-size: 14px;
+  color: #333;
+}
+
+.notification-prompt button {
+  padding: 8px 12px;
+  margin-right: 8px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+#grant-notification-btn {
+  background-color: #4caf50;
+  color: white;
+}
+
+#dismiss-notification-btn {
+  background-color: #f1f1f1;
+  color: #333;
+}
+
+#skip-btn {
+  background-color: #ff9800;
+  color: white;
+}
+
+#skip-btn:hover {
+  background-color: #f57c00;
+}
+
+#skip-btn:disabled {
+  background-color: #ffcc80;
+  cursor: not-allowed;
+}
+
+.notification-tip {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  z-index: 1000;
+  background-color: #fff;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  padding: 0;
+  max-width: 320px;
+  animation: slide-in 0.3s ease-out;
+}
+
+.notification-tip-content {
+  padding: 16px;
+}
+
+.notification-tip p {
+  margin: 0 0 12px 0;
+  font-size: 14px;
+  color: #333;
+}
+
+.notification-tip button {
+  padding: 8px 12px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 13px;
+  background-color: #f1f1f1;
+  color: #333;
+}
+
+@keyframes slide-in {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+} 
