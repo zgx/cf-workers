@@ -389,6 +389,38 @@ const html = `<!DOCTYPE html>
       background: rgba(255,255,255,1);
       box-shadow: 0 2px 5px rgba(0,0,0,0.1);
     }
+    
+    /* 番茄计数样式 */
+    .tomato-counter {
+      display: flex;
+      justify-content: center;
+      margin-top: 15px;
+      flex-wrap: wrap;
+      min-height: 32px;
+      overflow: hidden;
+    }
+    
+    .tomato-icon {
+      font-size: 24px;
+      margin: 0 3px;
+      transition: transform 0.3s ease;
+      display: inline-block;
+      animation: popIn 0.5s ease forwards;
+    }
+    
+    @keyframes popIn {
+      0% {
+        transform: scale(0);
+        opacity: 0;
+      }
+      70% {
+        transform: scale(1.2);
+      }
+      100% {
+        transform: scale(1);
+        opacity: 1;
+      }
+    }
   </style>
 </head>
 <body>
@@ -410,6 +442,9 @@ const html = `<!DOCTYPE html>
     <div class="timer-container">
       <div class="timer" id="timer">25:00</div>
     </div>
+    
+    <!-- 番茄计数显示 -->
+    <div class="tomato-counter" id="tomatoCounter"></div>
     
     <div class="controls">
       <button class="start-btn" id="startBtn">Start</button>
@@ -558,6 +593,77 @@ const html = `<!DOCTYPE html>
       let timeLeft = 0;
       let totalTime = 0;
       let lastTimestamp = 0; // 添加上次保存时间戳变量
+      let dailyTomatoCount = 0; // 当天完成的番茄数量
+      let lastResetDate = ''; // 上次重置日期
+      
+      // 从本地存储加载番茄计数
+      function loadTomatoCount() {
+        const storedData = localStorage.getItem('tomatoData');
+        if (storedData) {
+          const data = JSON.parse(storedData);
+          dailyTomatoCount = data.count || 0;
+          lastResetDate = data.resetDate || '';
+        }
+        checkDailyReset();
+        updateTomatoCountDisplay();
+      }
+      
+      // 检查是否需要每日重置 (6:00 AM)
+      function checkDailyReset() {
+        const now = new Date();
+        const today = now.toDateString();
+        const resetTime = new Date(now);
+        resetTime.setHours(6, 0, 0, 0);
+        
+        // 如果当前时间在今天的重置时间之后，但上次重置日期不是今天
+        if (now >= resetTime && lastResetDate !== today) {
+          dailyTomatoCount = 0;
+          lastResetDate = today;
+          saveTomatoData();
+        } 
+        // 如果当前时间在今天的重置时间之前，但上次重置日期既不是今天也不是昨天
+        else if (now < resetTime) {
+          const yesterday = new Date(now);
+          yesterday.setDate(yesterday.getDate() - 1);
+          if (lastResetDate !== today && lastResetDate !== yesterday.toDateString()) {
+            dailyTomatoCount = 0;
+            lastResetDate = yesterday.toDateString();
+            saveTomatoData();
+          }
+        }
+      }
+      
+      // 保存番茄数据到本地存储
+      function saveTomatoData() {
+        const data = {
+          count: dailyTomatoCount,
+          resetDate: lastResetDate
+        };
+        localStorage.setItem('tomatoData', JSON.stringify(data));
+      }
+      
+      // 更新番茄计数显示
+      function updateTomatoCountDisplay() {
+        const container = document.getElementById('tomatoCounter');
+        container.innerHTML = '';
+        
+        // 为每个完成的番茄添加一个图标
+        for (let i = 0; i < dailyTomatoCount; i++) {
+          const tomatoIcon = document.createElement('span');
+          tomatoIcon.className = 'tomato-icon';
+          tomatoIcon.textContent = '🍅';
+          tomatoIcon.style.animationDelay = i * 0.1 + 's';
+          container.appendChild(tomatoIcon);
+        }
+      }
+      
+      // 增加番茄计数
+      function incrementTomatoCount() {
+        checkDailyReset();
+        dailyTomatoCount++;
+        saveTomatoData();
+        updateTomatoCountDisplay();
+      }
       
       // 保存计时器状态到本地存储
       function saveTimerState() {
@@ -652,6 +758,9 @@ const html = `<!DOCTYPE html>
         updateTimerDisplay();
         updateModeIndicator();
         
+        // 加载番茄计数
+        loadTomatoCount();
+        
         // 初始化后更新UI语言
         updateUILanguage();
         
@@ -731,6 +840,11 @@ const html = `<!DOCTYPE html>
             timer = null;
             isRunning = false;
             document.getElementById('startBtn').textContent = t.start;
+            
+            // 如果是工作时间结束，增加番茄计数
+            if (isWorkTime) {
+              incrementTomatoCount();
+            }
             
             // 切换工作/休息状态
             isWorkTime = !isWorkTime;
