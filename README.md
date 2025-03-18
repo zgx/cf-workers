@@ -1,5 +1,7 @@
 # 🍅 番茄时钟 / Pomodoro Timer
 
+**在线体验 / Try it online:** [https://fanqie.kiki.one/](https://fanqie.kiki.one/)
+
 [English](#-pomodoro-timer) | [中文](#-番茄时钟)
 
 ## 🍅 番茄时钟
