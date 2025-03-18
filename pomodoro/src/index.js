@@ -557,6 +557,28 @@ const html = `<!DOCTYPE html>
       let timer = null;
       let timeLeft = 0;
       let totalTime = 0;
+      let lastTimestamp = 0; // 添加上次保存时间戳变量
+      
+      // 保存计时器状态到本地存储
+      function saveTimerState() {
+        const timerState = {
+          isRunning,
+          isWorkTime,
+          timeLeft,
+          totalTime,
+          timestamp: Date.now() // 当前时间戳
+        };
+        localStorage.setItem('timerState', JSON.stringify(timerState));
+      }
+      
+      // 每5秒保存一次计时器状态
+      function setupAutoSave() {
+        setInterval(() => {
+          if (isRunning) {
+            saveTimerState();
+          }
+        }, 5000);
+      }
       
       // 从本地存储加载设置
       function loadSettings() {
@@ -571,13 +593,78 @@ const html = `<!DOCTYPE html>
           document.getElementById('breakTime').value = savedBreakTime;
         }
         
-        timeLeft = document.getElementById('workTime').value * 60;
-        totalTime = timeLeft;
+        // 尝试恢复计时器状态
+        const savedTimerState = localStorage.getItem('timerState');
+        if (savedTimerState) {
+          try {
+            const timerState = JSON.parse(savedTimerState);
+            const now = Date.now();
+            const elapsedSeconds = Math.floor((now - timerState.timestamp) / 1000);
+            
+            isWorkTime = timerState.isWorkTime;
+            totalTime = timerState.totalTime;
+            
+            // 如果计时器在运行中，根据经过的时间更新剩余时间
+            if (timerState.isRunning) {
+              timeLeft = Math.max(0, timerState.timeLeft - elapsedSeconds);
+              
+              // 如果倒计时结束，切换到下一阶段
+              if (timeLeft <= 0) {
+                isWorkTime = !timerState.isWorkTime; // 切换到下一个阶段
+                timeLeft = isWorkTime ? 
+                           document.getElementById('workTime').value * 60 : 
+                           document.getElementById('breakTime').value * 60;
+                totalTime = timeLeft;
+                // 不自动开始下一个阶段
+                isRunning = false;
+              } else {
+                // 还在计时中，则自动继续
+                isRunning = true;
+                
+                // 页面加载后确保立即启动计时器
+                if (document.readyState === "complete" || document.readyState === "interactive") {
+                  // DOM已经准备好，短暂延迟后启动计时器
+                  setTimeout(startTimer, 100);
+                } else {
+                  // DOM还未准备好，等待DOMContentLoaded事件
+                  document.addEventListener("DOMContentLoaded", function() {
+                    startTimer();
+                  });
+                }
+              }
+            } else {
+              // 如果计时器处于暂停状态，直接恢复状态
+              timeLeft = timerState.timeLeft;
+              isRunning = false;
+              document.getElementById('startBtn').textContent = t.resume;
+              document.getElementById('statusDisplay').textContent = t.paused;
+            }
+            
+            updateModeIndicator();
+          } catch (error) {
+            console.error('Error restoring timer state:', error);
+            resetTimerState();
+          }
+        } else {
+          resetTimerState();
+        }
+        
         updateTimerDisplay();
         updateModeIndicator();
         
         // 初始化后更新UI语言
         updateUILanguage();
+        
+        // 设置自动保存
+        setupAutoSave();
+      }
+      
+      // 重置计时器状态
+      function resetTimerState() {
+        timeLeft = document.getElementById('workTime').value * 60;
+        totalTime = timeLeft;
+        isRunning = false;
+        isWorkTime = true;
       }
       
       // 保存设置到本地存储
@@ -590,7 +677,14 @@ const html = `<!DOCTYPE html>
       function updateTimerDisplay() {
         const minutes = Math.floor(timeLeft / 60);
         const seconds = timeLeft % 60;
-        document.getElementById('timer').textContent = \`\${minutes.toString().padStart(2, '0')}:\${seconds.toString().padStart(2, '0')}\`;
+        const timeDisplay = \`\${minutes.toString().padStart(2, '0')}:\${seconds.toString().padStart(2, '0')}\`;
+        document.getElementById('timer').textContent = timeDisplay;
+        
+        // 更新浏览器标题，显示计时状态
+        const statusText = isRunning ? 
+          (isWorkTime ? t.working : t.resting) : 
+          (timeLeft < totalTime ? t.paused : t.ready);
+        document.getElementById('pageTitle').textContent = \`\${timeDisplay} - \${statusText} - \${t.title}\`;
         
         // 更新进度条
         const progress = ((totalTime - timeLeft) / totalTime) * 100;
@@ -616,12 +710,17 @@ const html = `<!DOCTYPE html>
       
       // 开始计时器
       function startTimer() {
-        if (isRunning) return;
+        // 如果计时器已经在运行，不要重复启动
+        if (timer) {
+          clearInterval(timer);
+        }
         
         isRunning = true;
         document.getElementById('startBtn').textContent = t.pause;
-        
         document.getElementById('statusDisplay').textContent = isWorkTime ? t.working : t.resting;
+        
+        // 在开始新的计时之前立即保存状态
+        saveTimerState();
         
         timer = setInterval(() => {
           timeLeft--;
@@ -629,6 +728,7 @@ const html = `<!DOCTYPE html>
           
           if (timeLeft <= 0) {
             clearInterval(timer);
+            timer = null;
             isRunning = false;
             document.getElementById('startBtn').textContent = t.start;
             
@@ -648,6 +748,9 @@ const html = `<!DOCTYPE html>
             totalTime = timeLeft;
             updateTimerDisplay();
             document.getElementById('statusDisplay').textContent = isWorkTime ? t.readyToWork : t.readyToRest;
+            
+            // 阶段结束时保存状态
+            saveTimerState();
           }
         }, 1000);
       }
@@ -657,14 +760,19 @@ const html = `<!DOCTYPE html>
         if (!isRunning) return;
         
         clearInterval(timer);
+        timer = null;
         isRunning = false;
         document.getElementById('startBtn').textContent = t.resume;
         document.getElementById('statusDisplay').textContent = t.paused;
+        
+        // 暂停时保存状态
+        saveTimerState();
       }
       
       // 跳过当前阶段
       function skipPhase() {
         clearInterval(timer);
+        timer = null;
         isRunning = false;
         document.getElementById('startBtn').textContent = t.start;
         
@@ -677,11 +785,15 @@ const html = `<!DOCTYPE html>
         totalTime = timeLeft;
         updateTimerDisplay();
         document.getElementById('statusDisplay').textContent = isWorkTime ? t.readyToWork : t.readyToRest;
+        
+        // 跳过后保存状态
+        saveTimerState();
       }
       
       // 重置计时器
       function resetTimer() {
         clearInterval(timer);
+        timer = null;
         isRunning = false;
         isWorkTime = true;
         document.getElementById('startBtn').textContent = t.start;
@@ -691,6 +803,9 @@ const html = `<!DOCTYPE html>
         updateTimerDisplay();
         updateModeIndicator();
         document.getElementById('statusDisplay').textContent = t.ready;
+        
+        // 重置后保存状态
+        saveTimerState();
       }
       
       // 事件监听器
@@ -725,6 +840,7 @@ const html = `<!DOCTYPE html>
       
       // 初始化
       loadSettings();
+      updateTimerDisplay(); // 确保在初始化时也更新标题
       
       // 设置区域切换
       document.getElementById('settingsToggle').addEventListener('click', () => {
