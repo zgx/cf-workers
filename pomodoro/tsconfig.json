@@ -12,8 +12,8 @@
     "isolatedModules": true,
     "noEmit": true,
     "outDir": "dist",
-    "rootDir": "src"
+    "rootDir": "pomodoro/src"
   },
-  "include": ["src/**/*"],
+  "include": ["pomodoro/src/**/*"],
   "exclude": ["node_modules"]
 } 
