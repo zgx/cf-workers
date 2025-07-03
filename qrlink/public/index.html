@@ -1,0 +1,378 @@
+<!doctype html>
+<html lang="zh-CN">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>二维码生成器 - QR Link</title>
+		<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+		<link rel="icon" type="image/x-icon" href="/favicon.ico">
+		<link rel="preconnect" href="https://fonts.googleapis.com">
+		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+		<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+		<style>
+			* {
+				margin: 0;
+				padding: 0;
+				box-sizing: border-box;
+			}
+
+			body {
+				font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+				background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+				min-height: 100vh;
+				display: flex;
+				align-items: center;
+				justify-content: center;
+				padding: 20px;
+			}
+
+			.container {
+				background: rgba(255, 255, 255, 0.95);
+				backdrop-filter: blur(10px);
+				border-radius: 20px;
+				padding: 40px;
+				max-width: 500px;
+				width: 100%;
+				box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+				text-align: center;
+			}
+
+			.logo {
+				font-size: 2.5em;
+				margin-bottom: 10px;
+			}
+
+			h1 {
+				color: #333;
+				font-size: 2.2em;
+				font-weight: 600;
+				margin-bottom: 10px;
+			}
+
+			.subtitle {
+				color: #666;
+				font-size: 1.1em;
+				margin-bottom: 30px;
+				font-weight: 300;
+			}
+
+			.input-group {
+				margin-bottom: 25px;
+			}
+
+			label {
+				display: block;
+				text-align: left;
+				margin-bottom: 8px;
+				color: #555;
+				font-weight: 500;
+			}
+
+			input[type="text"], input[type="url"], textarea {
+				width: 100%;
+				padding: 15px;
+				border: 2px solid #e1e5e9;
+				border-radius: 12px;
+				font-size: 16px;
+				transition: all 0.3s ease;
+				background: #fff;
+			}
+
+			input[type="text"]:focus, input[type="url"]:focus, textarea:focus {
+				outline: none;
+				border-color: #667eea;
+				box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+			}
+
+			textarea {
+				resize: vertical;
+				min-height: 80px;
+				max-height: 150px;
+			}
+
+			.options {
+				display: flex;
+				gap: 15px;
+				margin-bottom: 25px;
+			}
+
+			.option {
+				flex: 1;
+			}
+
+			select {
+				width: 100%;
+				padding: 15px;
+				border: 2px solid #e1e5e9;
+				border-radius: 12px;
+				font-size: 16px;
+				background: #fff;
+				cursor: pointer;
+			}
+
+			.generate-btn {
+				background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+				color: white;
+				border: none;
+				padding: 15px 40px;
+				font-size: 1.1em;
+				font-weight: 600;
+				border-radius: 12px;
+				cursor: pointer;
+				transition: all 0.3s ease;
+				width: 100%;
+				margin-bottom: 30px;
+			}
+
+			.generate-btn:hover {
+				transform: translateY(-2px);
+				box-shadow: 0 10px 25px rgba(102, 126, 234, 0.3);
+			}
+
+			.generate-btn:active {
+				transform: translateY(0);
+			}
+
+			.generate-btn:disabled {
+				opacity: 0.6;
+				cursor: not-allowed;
+				transform: none;
+			}
+
+			.result {
+				display: none;
+				margin-top: 30px;
+				padding-top: 30px;
+				border-top: 1px solid #eee;
+			}
+
+			.qr-code {
+				background: #fff;
+				padding: 20px;
+				border-radius: 12px;
+				display: inline-block;
+				margin-bottom: 20px;
+				box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+			}
+
+			.download-btn {
+				background: #28a745;
+				color: white;
+				border: none;
+				padding: 12px 30px;
+				font-size: 1em;
+				font-weight: 500;
+				border-radius: 8px;
+				cursor: pointer;
+				margin: 0 5px;
+				transition: all 0.3s ease;
+				text-decoration: none;
+				display: inline-block;
+			}
+
+			.download-btn:hover {
+				background: #218838;
+				transform: translateY(-1px);
+			}
+
+			.loading {
+				display: none;
+				margin: 20px 0;
+			}
+
+			.spinner {
+				border: 3px solid #f3f3f3;
+				border-top: 3px solid #667eea;
+				border-radius: 50%;
+				width: 30px;
+				height: 30px;
+				animation: spin 1s linear infinite;
+				margin: 0 auto;
+			}
+
+			@keyframes spin {
+				0% { transform: rotate(0deg); }
+				100% { transform: rotate(360deg); }
+			}
+
+			.error {
+				background: #f8d7da;
+				color: #721c24;
+				padding: 12px;
+				border-radius: 8px;
+				margin: 15px 0;
+				display: none;
+			}
+
+			@media (max-width: 480px) {
+				.container {
+					padding: 30px 20px;
+				}
+
+				h1 {
+					font-size: 1.8em;
+				}
+
+				.options {
+					flex-direction: column;
+					gap: 10px;
+				}
+			}
+		</style>
+	</head>
+	<body>
+		<div class="container">
+			<div class="logo">📱</div>
+			<h1>二维码生成器</h1>
+			<p class="subtitle">快速将文字、链接转换为二维码</p>
+
+			<form id="qrForm">
+				<div class="input-group">
+					<label for="content">输入内容</label>
+					<textarea id="content" placeholder="输入网址、文字或任何内容..." required></textarea>
+				</div>
+
+				<div class="options">
+					<div class="option">
+						<label for="size">尺寸</label>
+						<select id="size">
+							<option value="200">小 (200x200)</option>
+							<option value="300" selected>中 (300x300)</option>
+							<option value="400">大 (400x400)</option>
+							<option value="500">超大 (500x500)</option>
+						</select>
+					</div>
+					<div class="option">
+						<label for="format">格式</label>
+						<select id="format">
+							<option value="png" selected>PNG</option>
+							<option value="svg">SVG</option>
+						</select>
+					</div>
+				</div>
+
+				<button type="submit" class="generate-btn">
+					生成二维码
+				</button>
+			</form>
+
+			<div class="loading">
+				<div class="spinner"></div>
+				<p>正在生成二维码...</p>
+			</div>
+
+			<div class="error" id="error"></div>
+
+			<div class="result" id="result">
+				<div class="qr-code">
+					<img id="qrImage" alt="Generated QR Code" />
+				</div>
+				<div>
+					<a href="#" class="download-btn" id="downloadBtn" download="qrcode">下载二维码</a>
+				</div>
+			</div>
+		</div>
+
+		<script>
+			const form = document.getElementById('qrForm');
+			const contentInput = document.getElementById('content');
+			const sizeSelect = document.getElementById('size');
+			const formatSelect = document.getElementById('format');
+			const generateBtn = form.querySelector('.generate-btn');
+			const loading = document.querySelector('.loading');
+			const error = document.getElementById('error');
+			const result = document.getElementById('result');
+			const qrImage = document.getElementById('qrImage');
+			const downloadBtn = document.getElementById('downloadBtn');
+
+			form.addEventListener('submit', async (e) => {
+				e.preventDefault();
+				
+				const content = contentInput.value.trim();
+				if (!content) {
+					showError('请输入要生成二维码的内容');
+					return;
+				}
+
+				hideError();
+				hideResult();
+				showLoading();
+				generateBtn.disabled = true;
+
+				try {
+					const size = sizeSelect.value;
+					const format = formatSelect.value;
+					
+					const response = await fetch('/api/qr', {
+						method: 'POST',
+						headers: {
+							'Content-Type': 'application/json',
+						},
+						body: JSON.stringify({
+							content,
+							size: parseInt(size),
+							format
+						})
+					});
+
+					if (!response.ok) {
+						throw new Error(`HTTP error! status: ${response.status}`);
+					}
+
+					if (format === 'svg') {
+						const svgText = await response.text();
+						const blob = new Blob([svgText], { type: 'image/svg+xml' });
+						const url = URL.createObjectURL(blob);
+						
+						qrImage.src = url;
+						downloadBtn.href = url;
+						downloadBtn.download = 'qrcode.svg';
+					} else {
+						const blob = await response.blob();
+						const url = URL.createObjectURL(blob);
+						
+						qrImage.src = url;
+						downloadBtn.href = url;
+						downloadBtn.download = 'qrcode.png';
+					}
+
+					showResult();
+				} catch (err) {
+					console.error('Error generating QR code:', err);
+					showError('生成二维码失败，请稍后重试');
+				} finally {
+					hideLoading();
+					generateBtn.disabled = false;
+				}
+			});
+
+			function showLoading() {
+				loading.style.display = 'block';
+			}
+
+			function hideLoading() {
+				loading.style.display = 'none';
+			}
+
+			function showError(message) {
+				error.textContent = message;
+				error.style.display = 'block';
+			}
+
+			function hideError() {
+				error.style.display = 'none';
+			}
+
+			function showResult() {
+				result.style.display = 'block';
+			}
+
+			function hideResult() {
+				result.style.display = 'none';
+			}
+
+			// 自动聚焦到输入框
+			contentInput.focus();
+		</script>
+	</body>
+</html>
