@@ -96,6 +96,51 @@
 				margin-bottom: 25px;
 			}
 
+			.advanced-toggle {
+				margin-bottom: 20px;
+			}
+
+			.toggle-btn {
+				background: none;
+				border: 2px solid #e1e5e9;
+				border-radius: 8px;
+				padding: 10px 15px;
+				font-size: 14px;
+				color: #666;
+				cursor: pointer;
+				transition: all 0.3s ease;
+				display: flex;
+				align-items: center;
+				gap: 8px;
+				margin: 0 auto;
+			}
+
+			.toggle-btn:hover {
+				border-color: #667eea;
+				color: #667eea;
+			}
+
+			.toggle-icon {
+				transition: transform 0.3s ease;
+				font-size: 12px;
+			}
+
+			.toggle-btn.expanded .toggle-icon {
+				transform: rotate(180deg);
+			}
+
+			.advanced-section {
+				max-height: 0;
+				overflow: hidden;
+				transition: max-height 0.3s ease, opacity 0.3s ease;
+				opacity: 0;
+			}
+
+			.advanced-section.expanded {
+				max-height: 300px;
+				opacity: 1;
+			}
+
 			.advanced-options {
 				display: flex;
 				gap: 15px;
@@ -230,9 +275,13 @@
 					font-size: 1.8em;
 				}
 
-				.options {
+				.options, .advanced-options, .color-options {
 					flex-direction: column;
 					gap: 10px;
+				}
+
+				.advanced-section.expanded {
+					max-height: 400px;
 				}
 			}
 		</style>
@@ -265,35 +314,44 @@
 					</div>
 				</div>
 
-				<div class="advanced-options">
-					<div class="option">
-						<label for="errorLevel">容错级别</label>
-						<select id="errorLevel">
-							<option value="L">低 (L) - 约7%</option>
-							<option value="M" selected>中 (M) - 约15%</option>
-							<option value="Q">较高 (Q) - 约25%</option>
-							<option value="H">高 (H) - 约30%</option>
-						</select>
-					</div>
-					<div class="option">
-						<label for="margin">边距</label>
-						<select id="margin">
-							<option value="2">小 (2)</option>
-							<option value="4" selected>中 (4)</option>
-							<option value="6">大 (6)</option>
-							<option value="8">超大 (8)</option>
-						</select>
-					</div>
+				<div class="advanced-toggle">
+					<button type="button" id="advancedToggle" class="toggle-btn">
+						<span class="toggle-icon">▼</span>
+						高级选项
+					</button>
 				</div>
 
-				<div class="color-options">
-					<div class="option">
-						<label for="darkColor">前景色</label>
-						<input type="color" id="darkColor" value="#000000">
+				<div class="advanced-section" id="advancedSection">
+					<div class="advanced-options">
+						<div class="option">
+							<label for="errorLevel">容错级别</label>
+							<select id="errorLevel">
+								<option value="L">低 (L) - 约7%</option>
+								<option value="M" selected>中 (M) - 约15%</option>
+								<option value="Q">较高 (Q) - 约25%</option>
+								<option value="H">高 (H) - 约30%</option>
+							</select>
+						</div>
+						<div class="option">
+							<label for="margin">边距</label>
+							<select id="margin">
+								<option value="2">小 (2)</option>
+								<option value="4" selected>中 (4)</option>
+								<option value="6">大 (6)</option>
+								<option value="8">超大 (8)</option>
+							</select>
+						</div>
 					</div>
-					<div class="option">
-						<label for="lightColor">背景色</label>
-						<input type="color" id="lightColor" value="#FFFFFF">
+
+					<div class="color-options">
+						<div class="option">
+							<label for="darkColor">前景色</label>
+							<input type="color" id="darkColor" value="#000000">
+						</div>
+						<div class="option">
+							<label for="lightColor">背景色</label>
+							<input type="color" id="lightColor" value="#FFFFFF">
+						</div>
 					</div>
 				</div>
 
@@ -334,6 +392,22 @@
 			const result = document.getElementById('result');
 			const qrImage = document.getElementById('qrImage');
 			const downloadBtn = document.getElementById('downloadBtn');
+
+			// 高级选项切换
+			const advancedToggle = document.getElementById('advancedToggle');
+			const advancedSection = document.getElementById('advancedSection');
+
+			advancedToggle.addEventListener('click', () => {
+				const isExpanded = advancedSection.classList.contains('expanded');
+				
+				if (isExpanded) {
+					advancedSection.classList.remove('expanded');
+					advancedToggle.classList.remove('expanded');
+				} else {
+					advancedSection.classList.add('expanded');
+					advancedToggle.classList.add('expanded');
+				}
+			});
 
 			form.addEventListener('submit', async (e) => {
 				e.preventDefault();
