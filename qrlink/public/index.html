@@ -96,11 +96,23 @@
 				margin-bottom: 25px;
 			}
 
+			.advanced-options {
+				display: flex;
+				gap: 15px;
+				margin-bottom: 25px;
+			}
+
+			.color-options {
+				display: flex;
+				gap: 15px;
+				margin-bottom: 25px;
+			}
+
 			.option {
 				flex: 1;
 			}
 
-			select {
+			select, input[type="color"] {
 				width: 100%;
 				padding: 15px;
 				border: 2px solid #e1e5e9;
@@ -108,6 +120,11 @@
 				font-size: 16px;
 				background: #fff;
 				cursor: pointer;
+			}
+
+			input[type="color"] {
+				height: 50px;
+				padding: 5px;
 			}
 
 			.generate-btn {
@@ -222,10 +239,7 @@
 	</head>
 	<body>
 		<div class="container">
-			<div class="logo">📱</div>
 			<h1>二维码生成器</h1>
-			<p class="subtitle">快速将文字、链接转换为二维码</p>
-
 			<form id="qrForm">
 				<div class="input-group">
 					<label for="content">输入内容</label>
@@ -248,6 +262,38 @@
 							<option value="png" selected>PNG</option>
 							<option value="svg">SVG</option>
 						</select>
+					</div>
+				</div>
+
+				<div class="advanced-options">
+					<div class="option">
+						<label for="errorLevel">容错级别</label>
+						<select id="errorLevel">
+							<option value="L">低 (L) - 约7%</option>
+							<option value="M" selected>中 (M) - 约15%</option>
+							<option value="Q">较高 (Q) - 约25%</option>
+							<option value="H">高 (H) - 约30%</option>
+						</select>
+					</div>
+					<div class="option">
+						<label for="margin">边距</label>
+						<select id="margin">
+							<option value="2">小 (2)</option>
+							<option value="4" selected>中 (4)</option>
+							<option value="6">大 (6)</option>
+							<option value="8">超大 (8)</option>
+						</select>
+					</div>
+				</div>
+
+				<div class="color-options">
+					<div class="option">
+						<label for="darkColor">前景色</label>
+						<input type="color" id="darkColor" value="#000000">
+					</div>
+					<div class="option">
+						<label for="lightColor">背景色</label>
+						<input type="color" id="lightColor" value="#FFFFFF">
 					</div>
 				</div>
 
@@ -278,6 +324,10 @@
 			const contentInput = document.getElementById('content');
 			const sizeSelect = document.getElementById('size');
 			const formatSelect = document.getElementById('format');
+			const errorLevelSelect = document.getElementById('errorLevel');
+			const marginSelect = document.getElementById('margin');
+			const darkColorInput = document.getElementById('darkColor');
+			const lightColorInput = document.getElementById('lightColor');
 			const generateBtn = form.querySelector('.generate-btn');
 			const loading = document.querySelector('.loading');
 			const error = document.getElementById('error');
@@ -302,6 +352,10 @@
 				try {
 					const size = sizeSelect.value;
 					const format = formatSelect.value;
+					const errorCorrectionLevel = errorLevelSelect.value;
+					const margin = parseInt(marginSelect.value);
+					const darkColor = darkColorInput.value;
+					const lightColor = lightColorInput.value;
 					
 					const response = await fetch('/api/qr', {
 						method: 'POST',
@@ -311,15 +365,24 @@
 						body: JSON.stringify({
 							content,
 							size: parseInt(size),
-							format
+							format,
+							errorCorrectionLevel,
+							margin,
+							color: {
+								dark: darkColor,
+								light: lightColor
+							}
 						})
 					});
 
 					if (!response.ok) {
-						throw new Error(`HTTP error! status: ${response.status}`);
+						const errorData = await response.json().catch(() => ({}));
+						throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
 					}
 
-					if (format === 'svg') {
+					const needsPngConversion = response.headers.get('X-QR-Format') === 'png';
+					
+					if (format === 'svg' && !needsPngConversion) {
 						const svgText = await response.text();
 						const blob = new Blob([svgText], { type: 'image/svg+xml' });
 						const url = URL.createObjectURL(blob);
@@ -327,19 +390,29 @@
 						qrImage.src = url;
 						downloadBtn.href = url;
 						downloadBtn.download = 'qrcode.svg';
+					} else if (format === 'png' && needsPngConversion) {
+						// SVG转PNG
+						const svgText = await response.text();
+						const pngBlob = await convertSvgToPng(svgText, parseInt(size));
+						const url = URL.createObjectURL(pngBlob);
+						
+						qrImage.src = url;
+						downloadBtn.href = url;
+						downloadBtn.download = 'qrcode.png';
 					} else {
+						// 其他情况
 						const blob = await response.blob();
 						const url = URL.createObjectURL(blob);
 						
 						qrImage.src = url;
 						downloadBtn.href = url;
-						downloadBtn.download = 'qrcode.png';
+						downloadBtn.download = `qrcode.${format}`;
 					}
 
 					showResult();
 				} catch (err) {
 					console.error('Error generating QR code:', err);
-					showError('生成二维码失败，请稍后重试');
+					showError(err.message || '生成二维码失败，请稍后重试');
 				} finally {
 					hideLoading();
 					generateBtn.disabled = false;
@@ -369,6 +442,27 @@
 
 			function hideResult() {
 				result.style.display = 'none';
+			}
+
+			// SVG转PNG函数
+			async function convertSvgToPng(svgText, size) {
+				return new Promise((resolve) => {
+					const canvas = document.createElement('canvas');
+					const ctx = canvas.getContext('2d');
+					const img = new Image();
+					
+					canvas.width = size;
+					canvas.height = size;
+					
+					img.onload = function() {
+						ctx.drawImage(img, 0, 0, size, size);
+						canvas.toBlob(resolve, 'image/png');
+					};
+					
+					const svgBlob = new Blob([svgText], { type: 'image/svg+xml' });
+					const url = URL.createObjectURL(svgBlob);
+					img.src = url;
+				});
 			}
 
 			// 自动聚焦到输入框
