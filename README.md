@@ -7,6 +7,7 @@
 ### 📱 QR Link - 二维码生成器
 
 **目录：** `qrlink/`
+**在线体验：** [https://qr.kiki.one/](https://qr.kiki.one/)
 
 一个简洁优美的二维码生成器，可以将任何文字、链接或内容快速转换为高质量的二维码。
 
@@ -53,7 +54,7 @@ npm run deploy
 
 ---
 
-### �🍅 番茄时钟 / Pomodoro Timer
+### 🍅 番茄时钟 / Pomodoro Timer
 
 **目录：** `pomodoro/`  
 **在线体验：** [https://fanqie.kiki.one/](https://fanqie.kiki.one/)
@@ -295,54 +296,6 @@ npm run deploy
 cd [project-directory]
 npm run dev
 ```
-
-这将启动 Wrangler 开发服务器，通常在 `http://localhost:8787`。
-
-## 📊 项目特性对比
-
-| 功能 | QR Link | Pomodoro Timer |
-|------|---------|----------------|
-| 用户界面 | 单页应用 | 单页应用 |
-| 语言支持 | 中文 | 中英双语 |
-| 数据持久化 | 无 | localStorage |
-| 通知功能 | 无 | 桌面通知 |
-| 响应式设计 | ✅ | ✅ |
-| PWA 支持 | ❌ | ❌ |
-| 离线功能 | ❌ | ❌ |
-
-## 🔧 技术架构
-
-所有项目都基于以下技术栈：
-
-- **运行环境**: Cloudflare Workers
-- **开发语言**: TypeScript/JavaScript  
-- **构建工具**: Wrangler
-- **前端技术**: HTML5, CSS3, Vanilla JavaScript
-- **部署方式**: 边缘计算，全球 CDN
-
-### Cloudflare Workers 优势
-
-- ⚡ **极速启动**: 冷启动时间 < 5ms
-- 🌍 **全球分布**: 在 200+ 个城市的边缘节点运行
-- 💰 **成本效益**: 免费层每天 100,000 次请求
-- 🔒 **安全可靠**: 企业级安全保障
-- 📈 **自动扩容**: 根据流量自动调整资源
-
-## 📈 性能优化
-
-### 通用优化策略
-
-1. **资源压缩**: 所有静态资源都经过压缩
-2. **缓存策略**: 合理设置 Cache-Control 头
-3. **字体优化**: 使用 font-display: swap
-4. **图片优化**: 使用现代图片格式
-5. **代码分割**: 按需加载非关键资源
-
-### 监控和分析
-
-- **Cloudflare Analytics**: 内置流量分析
-- **Real User Monitoring**: 真实用户体验监控
-- **Error Tracking**: 错误日志收集
 
 ## 🚨 故障排除
 
