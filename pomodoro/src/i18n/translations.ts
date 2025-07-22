@@ -1,4 +1,4 @@
-import { Translations } from '../types';
+import { Translations } from '../types/index';
 
 export const translations: Record<string, Translations> = {
   zh: {

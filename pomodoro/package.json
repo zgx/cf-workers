@@ -18,10 +18,10 @@
   "author": "",
   "license": "ISC",
   "devDependencies": {
-    "@cloudflare/vitest-pool-workers": "^0.7.5",
+    "@cloudflare/vitest-pool-workers": "^0.8.55",
     "@types/node": "^20.11.24",
     "typescript": "^5.3.3",
     "vitest": "~3.0.7",
     "wrangler": "^4.0.0"
   }
-} 
+}

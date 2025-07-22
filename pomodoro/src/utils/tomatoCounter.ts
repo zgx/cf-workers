@@ -1,4 +1,4 @@
-import { TomatoData } from '../types';
+import { TomatoData } from '../types/index';
 import { StorageManager } from './storage';
 
 export class TomatoCounter {

@@ -1,4 +1,4 @@
-import { TimerState, TomatoData } from '../types';
+import { TimerState, TomatoData } from '../types/index';
 
 export class StorageManager {
   static saveTimerState(state: TimerState): void {

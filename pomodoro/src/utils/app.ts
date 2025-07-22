@@ -1,4 +1,4 @@
-import { Language, Translations, TimerState } from '../types';
+import { Language, Translations, TimerState } from '../types/index';
 import { translations } from '../i18n/translations';
 import { Timer } from './timer';
 import { TomatoCounter } from './tomatoCounter';

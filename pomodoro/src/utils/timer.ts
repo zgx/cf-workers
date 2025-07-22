@@ -1,4 +1,4 @@
-import { TimerState } from '../types';
+import { TimerState } from '../types/index';
 import { StorageManager } from './storage';
 import { NotificationManager } from './notifications';
 

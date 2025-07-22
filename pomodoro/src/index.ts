@@ -1,4 +1,4 @@
-import { Env } from './types';
+import { Env } from './types/index';
 import { styles } from './styles/styles';
 
 const html = `<!DOCTYPE html>
